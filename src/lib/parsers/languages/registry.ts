@@ -1,7 +1,13 @@
 import path from 'path';
-import type { LanguageMapper } from './types';
+import type { LanguageMapper, RegexLanguageMapper } from './types';
 
-export { type LanguageMapper, type ExtractedSymbol, type ExtractedEdge, type ExtractedImport } from './types';
+export {
+  type LanguageMapper,
+  type RegexLanguageMapper,
+  type ExtractedSymbol,
+  type ExtractedEdge,
+  type ExtractedImport,
+} from './types';
 
 // web-tree-sitter types (loaded lazily)
 type WTSLanguage = any;
@@ -17,6 +23,9 @@ interface LanguageEntry {
 
 /** Map from language name (matching file-lang.ts names) to entry. */
 const languages = new Map<string, LanguageEntry>();
+
+/** Map from language name to a regex-based fallback mapper. */
+const regexLanguages = new Map<string, RegexLanguageMapper>();
 
 /** WASM directory containing grammar .wasm files */
 const WASM_DIR = path.join(
@@ -42,9 +51,14 @@ export async function initParser(): Promise<void> {
   return _initPromise;
 }
 
-/** Register a language (sync — only stores metadata). */
+/** Register a tree-sitter language (sync — only stores metadata). */
 export function registerLanguage(name: string, wasmFile: string, mapper: LanguageMapper): void {
   languages.set(name, { wasmFile, language: null, mapper });
+}
+
+/** Register a regex-based fallback mapper for a language without tree-sitter support. */
+export function registerRegexLanguage(name: string, mapper: RegexLanguageMapper): void {
+  regexLanguages.set(name, mapper);
 }
 
 /** Load a language WASM if not already loaded. */
@@ -56,9 +70,14 @@ async function loadLanguage(entry: LanguageEntry): Promise<WTSLanguage> {
   return entry.language;
 }
 
-/** Check if a language is registered. */
+/** Check if a tree-sitter language is registered. */
 export function isLanguageSupported(languageName: string): boolean {
   return languages.has(languageName);
+}
+
+/** Check if a regex-fallback mapper is registered for a language. */
+export function isRegexLanguageSupported(languageName: string): boolean {
+  return regexLanguages.has(languageName);
 }
 
 /** Reusable parser per language (avoids WASM memory leak from creating Parser on every call). */
@@ -81,12 +100,22 @@ export async function parseSource(code: string, languageName: string): Promise<a
   return tree ?? null;
 }
 
-/** Get the mapper for a language. Returns undefined for unsupported languages. */
+/** Get the tree-sitter mapper for a language. Returns undefined for unsupported languages. */
 export function getMapper(languageName: string): LanguageMapper | undefined {
   return languages.get(languageName)?.mapper;
 }
 
-/** List all registered language names. */
+/** Get the regex fallback mapper for a language. Returns undefined if none registered. */
+export function getRegexMapper(languageName: string): RegexLanguageMapper | undefined {
+  return regexLanguages.get(languageName);
+}
+
+/** List all registered tree-sitter language names. */
 export function listLanguages(): string[] {
   return [...languages.keys()];
+}
+
+/** List all registered regex-fallback language names. */
+export function listRegexLanguages(): string[] {
+  return [...regexLanguages.keys()];
 }
