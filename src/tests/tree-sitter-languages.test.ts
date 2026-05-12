@@ -348,3 +348,217 @@ main "$@"
   it('extracts main', () => { expect(names(pf)).toContain('main'); });
   it('function kind=function', () => { expect(node(pf, 'deploy')?.attrs.kind).toBe('function'); });
 });
+
+// ---------------------------------------------------------------------------
+// GDScript
+// ---------------------------------------------------------------------------
+
+describe('gdscript tree-sitter mapper', () => {
+  const src = `class_name Player extends CharacterBody2D
+
+signal health_changed(new_health: int)
+
+enum State { IDLE, RUNNING, JUMPING }
+
+const MAX_SPEED: float = 200.0
+
+var health: int = 100
+
+func _ready() -> void:
+\tpass
+
+func take_damage(amount: int) -> void:
+\thealth -= amount
+
+class Weapon:
+\tvar damage: int = 10
+\t
+\tfunc fire() -> void:
+\t\tpass
+`;
+
+  let pf: ParsedFile;
+  beforeAll(async () => { pf = await parse('.gd', src); });
+
+  it('extracts class_name as class', () => { expect(names(pf)).toContain('Player'); });
+  it('class_name kind=class', () => { expect(node(pf, 'Player')?.attrs.kind).toBe('class'); });
+  it('extracts signal', () => { expect(names(pf)).toContain('health_changed'); });
+  it('extracts enum', () => { expect(names(pf)).toContain('State'); });
+  it('enum kind=enum', () => { expect(node(pf, 'State')?.attrs.kind).toBe('enum'); });
+  it('extracts const', () => { expect(names(pf)).toContain('MAX_SPEED'); });
+  it('extracts var', () => { expect(names(pf)).toContain('health'); });
+  it('extracts function', () => { expect(names(pf)).toContain('take_damage'); });
+  it('function kind=function', () => { expect(node(pf, 'take_damage')?.attrs.kind).toBe('function'); });
+  it('extracts inner class', () => { expect(names(pf)).toContain('Weapon'); });
+  it('inner class kind=class', () => { expect(node(pf, 'Weapon')?.attrs.kind).toBe('class'); });
+  it('extends edge Player→CharacterBody2D', () => {
+    expect(pf.edges.some(e => e.attrs.kind === 'extends' && e.from.includes('Player') && e.to.includes('CharacterBody2D'))).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Godot scene (.tscn) — regex mapper
+// ---------------------------------------------------------------------------
+
+describe('godot-scene regex mapper', () => {
+  const src = `[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/player.gd" id="1_abc"]
+
+[node name="Player" type="CharacterBody2D"]
+script = ExtResource("1_abc")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+
+[node name="Hitbox" type="CollisionShape2D" parent="HUD/Container"]
+
+[sub_resource type="CapsuleShape2D" id="shape_1"]
+
+[connection signal="body_entered" from="Player" to="Player" method="_on_body_entered"]
+`;
+
+  let pf: ParsedFile;
+  beforeAll(async () => { pf = await parse('.tscn', src); });
+
+  it('extracts root node as class', () => { expect(node(pf, 'Player')?.attrs.kind).toBe('class'); });
+  it('extracts child node as variable', () => { expect(node(pf, 'Sprite2D')?.attrs.kind).toBe('variable'); });
+  it('extracts deeply nested node with path', () => { expect(names(pf)).toContain('HUD/Container/Hitbox'); });
+  it('extracts sub_resource', () => { expect(names(pf).some(n => n.includes('CapsuleShape2D'))).toBe(true); });
+  it('extracts connection as variable', () => { expect(names(pf).some(n => n.includes('body_entered'))).toBe(true); });
+});
+
+// ---------------------------------------------------------------------------
+// Godot resource (.tres) — regex mapper
+// ---------------------------------------------------------------------------
+
+describe('godot-resource regex mapper', () => {
+  const src = `[gd_resource type="PhysicsMaterial" load_steps=2 format=3]
+
+[ext_resource type="Texture2D" path="res://textures/ground.png" id="1_xyz"]
+
+[sub_resource type="CurveTexture" id="curve_1"]
+
+[resource]
+friction = 0.7
+`;
+
+  let pf: ParsedFile;
+  beforeAll(async () => { pf = await parse('.tres', src); });
+
+  it('extracts resource type as class', () => { expect(names(pf).some(n => n.includes('PhysicsMaterial'))).toBe(true); });
+  it('extracts sub_resource', () => { expect(names(pf).some(n => n.includes('curve_1'))).toBe(true); });
+});
+
+// ---------------------------------------------------------------------------
+// Godot project (project.godot) — regex mapper
+// ---------------------------------------------------------------------------
+
+describe('godot-project regex mapper', () => {
+  const src = `config_version=5
+
+[application]
+config/name="My Game"
+run/main_scene="res://scenes/main.tscn"
+
+[rendering]
+renderer/rendering_method="forward_plus"
+`;
+
+  let pf: ParsedFile;
+  beforeAll(async () => { pf = await parse('.godot', src); });
+
+  it('extracts [application] section', () => { expect(names(pf)).toContain('application'); });
+  it('extracts [rendering] section', () => { expect(names(pf)).toContain('rendering'); });
+});
+
+// ---------------------------------------------------------------------------
+// Godot extension (.gdextension) — regex mapper
+// ---------------------------------------------------------------------------
+
+describe('gdextension regex mapper', () => {
+  const src = `[configuration]
+entry_symbol = "example_library_init"
+compatibility_minimum = "4.1"
+
+[libraries]
+linux.x86_64 = "res://bin/example.so"
+windows.x86_64 = "res://bin/example.dll"
+`;
+
+  let pf: ParsedFile;
+  beforeAll(async () => { pf = await parse('.gdextension', src); });
+
+  it('extracts [configuration] section', () => { expect(names(pf)).toContain('configuration'); });
+  it('extracts [libraries] section', () => { expect(names(pf)).toContain('libraries'); });
+});
+
+// ---------------------------------------------------------------------------
+// C# — extended: namespace, enum, field, property, extends edge
+// ---------------------------------------------------------------------------
+
+describe('csharp tree-sitter mapper (extended)', () => {
+  const src = `using System;
+
+public class Repository {
+    private string conn;
+    public int Timeout { get; set; }
+
+    public void Connect() {}
+}
+
+namespace MyApp {
+    public class Service {}
+}
+
+public enum Direction {
+    North,
+    South
+}
+`;
+
+  let pf: ParsedFile;
+  beforeAll(async () => { pf = await parse('.cs', src); });
+
+  it('extracts top-level class', () => { expect(names(pf)).toContain('Repository'); });
+  it('extracts property as variable', () => { expect(names(pf)).toContain('Timeout'); });
+  it('extracts method as child of class', () => { expect(names(pf)).toContain('Connect'); });
+  it('extracts namespace', () => { expect(names(pf)).toContain('MyApp'); });
+  it('namespace kind=interface', () => { expect(node(pf, 'MyApp')?.attrs.kind).toBe('interface'); });
+  it('extracts class inside namespace', () => { expect(names(pf)).toContain('Service'); });
+  it('extracts enum', () => { expect(names(pf)).toContain('Direction'); });
+  it('enum kind=enum', () => { expect(node(pf, 'Direction')?.attrs.kind).toBe('enum'); });
+});
+
+// ---------------------------------------------------------------------------
+// C++ — extended: class with method body, inheritance, template, enum
+// ---------------------------------------------------------------------------
+
+describe('cpp tree-sitter mapper (extended)', () => {
+  const src = `class Animal {
+public:
+    virtual void speak() {}
+};
+
+class Dog : Animal {
+public:
+    void speak() override {}
+};
+
+template<typename T>
+class Box {
+};
+
+enum Color { Red, Green, Blue };
+`;
+
+  let pf: ParsedFile;
+  beforeAll(async () => { pf = await parse('.cpp', src); });
+
+  it('extracts base class', () => { expect(names(pf)).toContain('Animal'); });
+  it('extracts derived class', () => { expect(names(pf)).toContain('Dog'); });
+  it('extracts class method as child', () => { expect(names(pf)).toContain('speak'); });
+  it('method kind=method', () => { expect(node(pf, 'speak')?.attrs.kind).toBe('method'); });
+  it('extracts template class', () => { expect(names(pf)).toContain('Box'); });
+  it('extracts enum', () => { expect(names(pf)).toContain('Color'); });
+  it('enum kind=enum', () => { expect(node(pf, 'Color')?.attrs.kind).toBe('enum'); });
+});
