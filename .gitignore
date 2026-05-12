@@ -9,3 +9,5 @@ models/
 site/node_modules
 site/.docusaurus
 site/build
+.mcp.json
+.notes/

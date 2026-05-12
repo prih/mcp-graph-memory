@@ -128,6 +128,11 @@ export const EXT_TO_LANGUAGE: Record<string, string> = {
   '.gd': 'gdscript',
   '.gdshader': 'glsl',
   '.gdshaderinc': 'glsl',
+  '.tscn': 'godot-scene',
+  '.escn': 'godot-scene',
+  '.tres': 'godot-resource',
+  '.godot': 'godot-project',
+  '.gdextension': 'godot-extension',
 
   // Shaders
   '.glsl': 'glsl',

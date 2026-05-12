@@ -407,7 +407,7 @@ const SERVER_DEFAULTS: Omit<ServerConfig, 'embedding'> & { embedding: EmbeddingC
 
 const PROJECT_DEFAULTS = {
   docsInclude:     '**/*.md',
-  codeInclude:     '**/*.{js,ts,jsx,tsx,mjs,mts,cjs,cts}',
+  codeInclude:     '**/*.{js,ts,jsx,tsx,mjs,mts,cjs,cts,gd,gdshader,gdshaderinc,glsl,tscn,escn,tres,godot,gdextension}',
   chunkDepth:      4,
 };
 

@@ -18,7 +18,8 @@
     "test:watch": "NODE_OPTIONS='--experimental-vm-modules' jest --watch",
     "site:dev": "cd site && npm start",
     "site:build": "cd site && npm run build",
-    "site:serve": "cd site && npm run serve"
+    "site:serve": "cd site && npm run serve",
+    "postinstall": "node scripts/postinstall.js"
   },
   "repository": {
     "type": "git",
@@ -44,6 +45,8 @@
   },
   "files": [
     "dist/",
+    "wasm/",
+    "scripts/postinstall.js",
     "README.md"
   ],
   "publishConfig": {
@@ -69,6 +72,7 @@
     "pino": "^10.3.1",
     "pino-pretty": "^13.1.3",
     "redis": "^5.11.0",
+    "tree-sitter": "^0.21.1",
     "web-tree-sitter": "^0.26.7",
     "ws": "^8.19.0",
     "yaml": "^2.8.2",
@@ -88,6 +92,7 @@
     "graphology-types": "^0.24.8",
     "jest": "^30.3.0",
     "supertest": "^7.2.2",
+    "tree-sitter-gdscript": "^6.1.0",
     "ts-jest": "^29.4.6",
     "tsc-alias": "^1.8.16",
     "tsx": "^4.21.0",
