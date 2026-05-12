@@ -82,99 +82,28 @@ describe('createRegexMapper', () => {
 });
 
 describe('built-in regex languages', () => {
-  it('python is registered', () => {
-    expect(isRegexLanguageSupported('python')).toBe(true);
-  });
-
-  it('go is registered', () => {
-    expect(isRegexLanguageSupported('go')).toBe(true);
-  });
-
-  it('rust is registered', () => {
-    expect(isRegexLanguageSupported('rust')).toBe(true);
-  });
-
-  it('gdscript is registered', () => {
-    expect(isRegexLanguageSupported('gdscript')).toBe(true);
-  });
-
   it('glsl is registered', () => {
     expect(isRegexLanguageSupported('glsl')).toBe(true);
   });
 
+  it('python is NOT regex-registered (handled by tree-sitter)', () => {
+    expect(isRegexLanguageSupported('python')).toBe(false);
+  });
+
+  it('go is NOT regex-registered (handled by tree-sitter)', () => {
+    expect(isRegexLanguageSupported('go')).toBe(false);
+  });
+
+  it('rust is NOT regex-registered (handled by tree-sitter)', () => {
+    expect(isRegexLanguageSupported('rust')).toBe(false);
+  });
+
+  it('gdscript is NOT regex-registered (handled by tree-sitter)', () => {
+    expect(isRegexLanguageSupported('gdscript')).toBe(false);
+  });
+
   it('typescript is NOT regex-registered (handled by tree-sitter)', () => {
     expect(isRegexLanguageSupported('typescript')).toBe(false);
-  });
-
-  describe('python mapper', () => {
-    const py = getRegexMapper('python')!;
-    it('extracts def', () => {
-      expect(py.extractSymbols('def foo():\n    pass\n').map(s => s.name)).toEqual(['foo']);
-    });
-    it('extracts async def', () => {
-      expect(py.extractSymbols('async def foo():\n    pass\n').map(s => s.name)).toEqual(['foo']);
-    });
-    it('extracts class', () => {
-      expect(py.extractSymbols('class Foo(Base):\n    pass\n').map(s => s.name)).toEqual(['Foo']);
-    });
-    it('extracts from … import', () => {
-      expect(py.extractImports('from os.path import join\n').map(i => i.specifier)).toEqual(['os.path']);
-    });
-    it('extracts plain import', () => {
-      expect(py.extractImports('import sys\n').map(i => i.specifier)).toEqual(['sys']);
-    });
-  });
-
-  describe('go mapper', () => {
-    const go = getRegexMapper('go')!;
-    it('extracts func', () => {
-      expect(go.extractSymbols('func Hello() {}\n').map(s => s.name)).toEqual(['Hello']);
-    });
-    it('extracts method receiver func', () => {
-      expect(go.extractSymbols('func (s *Server) Run() {}\n').map(s => s.name)).toEqual(['Run']);
-    });
-    it('extracts struct type', () => {
-      const out = go.extractSymbols('type Server struct {}\n');
-      expect(out.map(s => s.name)).toEqual(['Server']);
-      expect(out[0].kind).toBe('class');
-    });
-    it('extracts import', () => {
-      expect(go.extractImports('import "fmt"\n').map(i => i.specifier)).toEqual(['fmt']);
-    });
-  });
-
-  describe('rust mapper', () => {
-    const rs = getRegexMapper('rust')!;
-    it('extracts pub fn', () => {
-      expect(rs.extractSymbols('pub fn launch() {}\n').map(s => s.name)).toEqual(['launch']);
-    });
-    it('extracts struct', () => {
-      expect(rs.extractSymbols('pub struct Engine {}\n').map(s => s.name)).toEqual(['Engine']);
-    });
-    it('extracts trait', () => {
-      const out = rs.extractSymbols('pub trait Runnable {}\n');
-      expect(out[0].kind).toBe('interface');
-    });
-  });
-
-  describe('gdscript mapper', () => {
-    const gd = getRegexMapper('gdscript')!;
-    it('extracts func', () => {
-      const src = 'func _ready():\n\tpass\nfunc fire(target):\n\tpass\n';
-      expect(gd.extractSymbols(src).map(s => s.name)).toEqual(['_ready', 'fire']);
-    });
-    it('extracts class_name', () => {
-      const out = gd.extractSymbols('class_name Player\nextends Node\n');
-      expect(out.map(s => s.name)).toContain('Player');
-    });
-    it('extracts signal', () => {
-      const out = gd.extractSymbols('signal hit_target\n');
-      expect(out.map(s => s.name)).toEqual(['hit_target']);
-    });
-    it('extracts preload import', () => {
-      const out = gd.extractImports('var Bullet = preload("res://scenes/bullet.tscn")\n');
-      expect(out.map(i => i.specifier)).toEqual(['res://scenes/bullet.tscn']);
-    });
   });
 
   describe('glsl mapper', () => {

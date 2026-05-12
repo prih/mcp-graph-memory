@@ -23,7 +23,7 @@ projects:
     expect(p.projectDir).toBe('/tmp/my-app');
     expect(p.graphMemory).toBe('/tmp/my-app/.graph-memory');
     expect(p.graphConfigs.docs.include).toBe('**/*.md');
-    expect(p.graphConfigs.code.include).toBe('**/*.{js,ts,jsx,tsx,mjs,mts,cjs,cts}');
+    expect(p.graphConfigs.code.include).toBe('**/*.{js,ts,jsx,tsx,mjs,mts,cjs,cts,gd,gdshader,gdshaderinc,glsl,tscn,escn,tres,godot,gdextension}');
     expect(p.exclude).toContain('**/node_modules/**');
     expect(p.chunkDepth).toBe(4);
     expect(p.embedding.maxChars).toBe(24000);
