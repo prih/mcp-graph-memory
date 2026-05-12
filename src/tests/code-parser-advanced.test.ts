@@ -243,7 +243,7 @@ describe('unsupported language file', () => {
   });
 
   it('returns file-only node for unknown extension', async () => {
-    const tmpFile = path.join(FIXTURES, '_test.py');
+    const tmpFile = path.join(FIXTURES, '_test.xyz');
     fs.writeFileSync(tmpFile, 'def foo(): pass\n');
     try {
       const pf = await parseCodeFile(tmpFile, FIXTURES, 1000);

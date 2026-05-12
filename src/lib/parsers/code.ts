@@ -1,7 +1,18 @@
 import fs from 'fs';
 import path from 'path';
 import type { CodeNodeAttributes, CodeEdgeAttributes } from '@/graphs/code-types';
-import { parseSource, getMapper, isLanguageSupported } from '@/lib/parsers/languages';
+import {
+  parseSource,
+  getMapper,
+  getRegexMapper,
+  isLanguageSupported,
+  isRegexLanguageSupported,
+} from '@/lib/parsers/languages';
+import type {
+  ExtractedSymbol,
+  ExtractedEdge,
+  ExtractedImport,
+} from '@/lib/parsers/languages';
 import { getLanguage } from '@/graphs/file-lang';
 
 // Strip line and block comments from JSONC, preserving string contents.
@@ -172,6 +183,18 @@ function resolveAliasImport(specifier: string, fromFile: string, projectDir: str
 // Main parser
 // ---------------------------------------------------------------------------
 
+function makeFileOnlyResult(fileId: string, mtime: number): ParsedFile {
+  return {
+    fileId,
+    mtime,
+    nodes: [{
+      id: fileId,
+      attrs: makeFileAttrs(fileId, '', '', 1, mtime),
+    }],
+    edges: [],
+  };
+}
+
 export async function parseCodeFile(
   absolutePath: string,
   codeDir: string,
@@ -183,46 +206,48 @@ export async function parseCodeFile(
   const ext = path.extname(absolutePath);
   const language = getLanguage(ext);
 
-  if (!language || !isLanguageSupported(language)) {
-    // Unsupported language — return file-only node, no symbols
-    return {
-      fileId,
-      mtime,
-      nodes: [{
-        id: fileId,
-        attrs: makeFileAttrs(fileId, '', '', 1, mtime),
-      }],
-      edges: [],
-    };
+  if (!language) return makeFileOnlyResult(fileId, mtime);
+
+  const treeSitterAvailable = isLanguageSupported(language);
+  const regexAvailable = !treeSitterAvailable && isRegexLanguageSupported(language);
+
+  if (!treeSitterAvailable && !regexAvailable) {
+    // Language is detected but no parser available — return file-only node.
+    return makeFileOnlyResult(fileId, mtime);
   }
 
   const source = fs.readFileSync(absolutePath, 'utf-8');
-  const tree = await parseSource(source, language);
 
-  if (!tree) {
-    return {
-      fileId,
-      mtime,
-      nodes: [{
-        id: fileId,
-        attrs: makeFileAttrs(fileId, '', '', 1, mtime),
-      }],
-      edges: [],
-    };
-  }
+  let symbols: ExtractedSymbol[];
+  let edgeInfos: ExtractedEdge[];
+  let imports: ExtractedImport[];
+  let fileDocComment = '';
+  let importSummary = '';
+  let lastLine: number;
 
-  const rootNode = tree.rootNode;
-  const mapper = getMapper(language)!;
-  let symbols, edgeInfos, imports, fileDocComment, importSummary, lastLine;
-  try {
-    symbols = mapper.extractSymbols(rootNode);
-    edgeInfos = mapper.extractEdges(rootNode);
-    imports = mapper.extractImports(rootNode);
-    fileDocComment = extractFileDocComment(rootNode);
-    importSummary = buildImportSummary(rootNode);
-    lastLine = (rootNode.endPosition?.row ?? 0) + 1;
-  } finally {
-    tree.delete();
+  if (treeSitterAvailable) {
+    const tree = await parseSource(source, language);
+    if (!tree) return makeFileOnlyResult(fileId, mtime);
+
+    const rootNode = tree.rootNode;
+    const mapper = getMapper(language)!;
+    try {
+      symbols = mapper.extractSymbols(rootNode);
+      edgeInfos = mapper.extractEdges(rootNode);
+      imports = mapper.extractImports(rootNode);
+      fileDocComment = extractFileDocComment(rootNode);
+      importSummary = buildImportSummary(rootNode);
+      lastLine = (rootNode.endPosition?.row ?? 0) + 1;
+    } finally {
+      tree.delete();
+    }
+  } else {
+    // Regex fallback path — operates on raw source text.
+    const mapper = getRegexMapper(language)!;
+    symbols = mapper.extractSymbols(source);
+    edgeInfos = mapper.extractEdges(source);
+    imports = mapper.extractImports(source);
+    lastLine = source.split(/\r?\n/).length;
   }
 
   const nodes: ParsedFile['nodes'] = [];

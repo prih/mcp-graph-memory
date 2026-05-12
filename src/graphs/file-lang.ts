@@ -123,6 +123,26 @@ export const EXT_TO_LANGUAGE: Record<string, string> = {
 
   // Zig
   '.zig': 'zig',
+
+  // Godot
+  '.gd': 'gdscript',
+  '.gdshader': 'glsl',
+  '.gdshaderinc': 'glsl',
+  '.tscn': 'godot-scene',
+  '.escn': 'godot-scene',
+  '.tres': 'godot-resource',
+  '.godot': 'godot-project',
+  '.gdextension': 'godot-extension',
+
+  // Shaders
+  '.glsl': 'glsl',
+  '.vert': 'glsl',
+  '.frag': 'glsl',
+  '.geom': 'glsl',
+  '.tesc': 'glsl',
+  '.tese': 'glsl',
+  '.comp': 'glsl',
+  '.hlsl': 'glsl',
 };
 
 /** Look up language from file extension. Returns null if unknown. */
